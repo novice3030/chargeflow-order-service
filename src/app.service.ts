@@ -15,9 +15,10 @@ export class AppService {
     // get product prices from the DB
     const productPrices = await this.db.getProductPrices([...cartProductIds]);
 
-    const totalAmount = productPrices
-      .map((productPrice) => productPrice.price)
-      .reduce((price, acc) => price + acc, 0);
+    const totalAmount = items.reduce(
+      (item, acc) => productPrices[item.productId] * item.quantity + acc,
+      0,
+    );
 
     const order = new Order();
     order.productIds = [...cartProductIds];
