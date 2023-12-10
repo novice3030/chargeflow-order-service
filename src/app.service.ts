@@ -1,15 +1,19 @@
 import { Injectable } from '@nestjs/common';
 import { ShoppingCartItem } from './dto/shopping-cart-item.dto';
 import { Order } from './dto/order.dto';
-import { Observable, of } from 'rxjs';
+import { DbService } from './services/db/db.service';
+import { PubsubService } from './services/pubsub/pubsub.service';
 
 @Injectable()
 export class AppService {
-  createOrder(items: ShoppingCartItem[]): Observable<Order> {
+  constructor(
+    private db: DbService,
+    private pubsub: PubsubService,
+  ) {}
+  async createOrder(items: ShoppingCartItem[]): Promise<Order> {
     const cartProductIds = new Set(items.map((item) => item.productId)); // unique products in the cart
     // get product prices from the DB
-    const productPrices =
-      await this.productService.getProductPrices(cartProductIds);
+    const productPrices = await this.db.getProductPrices([...cartProductIds]);
 
     const totalAmount = productPrices
       .map((productPrice) => productPrice.price)
@@ -24,9 +28,9 @@ export class AppService {
     const newOrder = await this.db.createOrder(order);
 
     // call publish handleOrder event
-    this.pubsub.publish('handleOrder', order);
+    this.pubsub.publish('orderCreated', order);
 
     // return the order details after we calculated and saved it to the DB
-    return of(newOrder);
+    return Promise.resolve(newOrder);
   }
 }
